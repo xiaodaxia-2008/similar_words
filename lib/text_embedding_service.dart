@@ -62,6 +62,28 @@ class TextEmbeddingService {
     log('TextEmbeddingService initialized.');
   }
 
+  Future<Map<String, double>> getSimilarities(
+    String query,
+    List<String> categories,
+  ) async {
+    await init();
+    Map<String, double> similarities = {};
+    final queryEmbedding = await getEmbedding(query);
+    final categoryEmbeddings = categories.map((category) async {
+      final embedding = await getEmbedding(category, storeCache: true);
+      return embedding;
+    }).toList();
+
+    for (int i = 0; i < categories.length; i++) {
+      final similarity = cosineSimilarity(
+        queryEmbedding,
+        await categoryEmbeddings[i],
+      );
+      similarities[categories[i]] = similarity;
+    }
+    return similarities;
+  }
+
   Future<int> mostSimilarIndex(String query, List<String> categories) async {
     await init();
     double maxSimilarity = -1.0;
@@ -154,7 +176,10 @@ class TextEmbeddingService {
       return _cache[sentence]!;
     }
 
-    final encoding = _tokenizer.encode(sentence);
+    // https://huggingface.co/google/embeddinggemma-300m#prompt-instructions
+    final decoratedSentence = "task: search result | query: $sentence";
+
+    final encoding = _tokenizer.encode(decoratedSentence);
 
     final inputIds = Int64List.fromList(encoding.ids);
     final attentionMask = Int64List.fromList(encoding.attentionMask);

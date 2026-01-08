@@ -34,10 +34,12 @@ class _MyHomePageState extends State<MyHomePage> {
   String _similarCategory = "";
 
   RxString _logMsg = "".obs;
+  RxMap<String, double> _similarities = <String, double>{}.obs;
 
   final List<String> _categories = [
     "餐饮",
     "酒水",
+    "水果",
     "蔬菜",
     "交通",
     "服饰",
@@ -49,7 +51,13 @@ class _MyHomePageState extends State<MyHomePage> {
     "美容",
     "居家",
     "健康",
+    "孩子",
+    "长辈",
+    "社交",
     "旅行",
+    "宠物",
+    "礼物",
+    "办公",
   ];
 
   late final TextEditingController _textController;
@@ -87,16 +95,41 @@ class _MyHomePageState extends State<MyHomePage> {
               style: TextStyle(fontSize: 20, color: Colors.green),
             ),
             const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text("所有分类：${_categories.join(", ")}"),
+            Expanded(
+              child: Obx(() {
+                if (_similarities.isNotEmpty) {
+                  final sortedEntries = _similarities.entries.toList()
+                    ..sort((a, b) => b.value.compareTo(a.value));
+                  return ListView.builder(
+                    itemCount: sortedEntries.length,
+                    itemBuilder: (context, index) {
+                      final entry = sortedEntries[index];
+                      return ListTile(
+                        title: Text(entry.key),
+                        dense: true,
+                        trailing: Text(
+                          "${(entry.value * 100.0).toStringAsFixed(2)}%",
+                        ),
+                      );
+                    },
+                  );
+                } else {
+                  return ListView.builder(
+                    itemCount: _categories.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Text(_categories[index]),
+                        dense: true,
+                      );
+                    },
+                  );
+                }
+              }),
             ),
-            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: showNewCategorySheet,
               child: const Text("添加分类"),
             ),
-            const Spacer(),
             Obx(() => Text(_logMsg.value)),
           ],
         ),
@@ -161,12 +194,25 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _similarCategory = "计算中···";
     });
-    await Future.delayed(Duration(milliseconds: 50));
+    _similarities.clear();
+    await Future.delayed(const Duration(milliseconds: 50));
     final word = _textController.text;
-    final index = await _service.mostSimilarIndex(word, _categories);
-    setState(() {
-      _similarCategory = _categories[index];
-    });
+    final similarities = await _service.getSimilarities(word, _categories);
+    _similarities.addAll(similarities);
+
+    if (similarities.isNotEmpty) {
+      final maxEntry = similarities.entries.reduce(
+        (a, b) => a.value > b.value ? a : b,
+      );
+      setState(() {
+        _similarCategory = maxEntry.key;
+      });
+    } else {
+      setState(() {
+        _similarCategory = "无";
+      });
+    }
+
     await prefs.setString("lastQuery", word);
     _logMsg.value = "";
   }
