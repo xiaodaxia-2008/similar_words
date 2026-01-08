@@ -1,4 +1,4 @@
-package com.example.similar_words
+package com.myshawn.similar_words
 
 import io.flutter.embedding.android.FlutterActivity
 

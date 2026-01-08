@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math';
-
 import 'package:dart_sentencepiece_tokenizer/dart_sentencepiece_tokenizer.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -12,6 +11,8 @@ class TextEmbeddingService {
   late OrtSession _session;
   bool _isInitialized = false;
 
+  void Function(String msg)? _log;
+
   final Map<String, List<double>> _cache = {};
 
   final Dio _dio = Dio();
@@ -19,11 +20,23 @@ class TextEmbeddingService {
   late String _modelPath;
   late String _tokenizerPath;
 
+  void setLogHandler(void Function(String msg) log) {
+    _log = log;
+  }
+
+  void log(String msg) {
+    if (_log != null) {
+      _log!(msg);
+    } else {
+      print(msg);
+    }
+  }
+
   Future<void> init() async {
     if (_isInitialized) {
       return;
     }
-    print('Initializing TextEmbeddingService...');
+    log('Initializing TextEmbeddingService...');
 
     String appDocDir;
     if (Platform.isWindows && !kIsWeb) {
@@ -34,9 +47,9 @@ class TextEmbeddingService {
     _modelPath = '$appDocDir/models/model_int8.onnx';
     _tokenizerPath = '$appDocDir/models/tokenizer.model';
 
-    print("downloadModel");
+    log("downloadModel");
     await downloadModel();
-    print("finish downloadModel");
+    log("finish downloadModel");
 
     _tokenizer = SentencePieceTokenizer.fromModelFileSync(
       _tokenizerPath,
@@ -46,7 +59,7 @@ class TextEmbeddingService {
     _session = await ort.createSession(_modelPath);
 
     _isInitialized = true;
-    print('TextEmbeddingService initialized.');
+    log('TextEmbeddingService initialized.');
   }
 
   Future<int> mostSimilarIndex(String query, List<String> categories) async {
@@ -85,45 +98,46 @@ class TextEmbeddingService {
     final hostUrlZn = 'https://hf-mirror.com';
     for (var hostUrl in [hostUrlZn, hostUrlEn]) {
       try {
-        print('Try downloading model from $hostUrl');
+        log('Try downloading model from $hostUrl');
         if (!modelFile.existsSync()) {
+          log("从 $hostUrl 下载模型...");
           final url =
               '$hostUrl/LeePark/gemma-embedding-300M-onnx-int8/resolve/main/model_int8.onnx';
-          print('Downloading model from $url to $_modelPath');
+          log('Downloading model from $url to $_modelPath');
           await _dio.download(
             url,
             _modelPath,
             onReceiveProgress: (received, total) {
               if (total != -1) {
-                print(
+                log(
                   'Model download progress: ${(received / total * 100).toStringAsFixed(0)}%',
                 );
               }
             },
           );
-          print('Model downloaded to $_modelPath');
+          log('Model downloaded to $_modelPath');
         }
 
         if (!tokenizerFile.existsSync()) {
           final url =
               '$hostUrl/LeePark/gemma-embedding-300M-onnx-int8/resolve/main/tokenizer.model';
-          print('Downloading tokenizer from $url to $_tokenizerPath');
+          log('Downloading tokenizer from $url to $_tokenizerPath');
           await _dio.download(
             url,
             _tokenizerPath,
             onReceiveProgress: (received, total) {
               if (total != -1) {
-                print(
+                log(
                   'Tokenizer download progress: ${(received / total * 100).toStringAsFixed(0)}%',
                 );
               }
             },
           );
-          print('Tokenizer downloaded to $_tokenizerPath');
+          log('Tokenizer downloaded to $_tokenizerPath');
         }
         break;
       } catch (e) {
-        print('Error downloading model from $hostUrl: $e');
+        log('Error downloading model from $hostUrl: $e');
       }
     }
   }

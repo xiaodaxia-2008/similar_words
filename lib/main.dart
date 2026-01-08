@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart';
 
 import './text_embedding_service.dart';
 
@@ -30,7 +31,9 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  String _similarCategory = "健身";
+  String _similarCategory = "";
+
+  RxString _logMsg = "".obs;
 
   final List<String> _categories = [
     "餐饮",
@@ -52,6 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late final TextEditingController _textController;
   late final TextEditingController _newCategoryTextController;
   late final TextEmbeddingService _service;
+  late final SharedPreferences prefs;
 
   @override
   Widget build(BuildContext context) {
@@ -85,13 +89,15 @@ class _MyHomePageState extends State<MyHomePage> {
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text("所有分类：${_categories.join(",")}"),
+              child: Text("所有分类：${_categories.join(", ")}"),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: showNewCategorySheet,
               child: const Text("添加分类"),
             ),
+            const Spacer(),
+            Obx(() => Text(_logMsg.value)),
           ],
         ),
       ),
@@ -115,14 +121,16 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     _textController = TextEditingController();
-    _textController.text = "跑步";
     _newCategoryTextController = TextEditingController();
     _service = TextEmbeddingService();
+    _service.setLogHandler((String msg) {
+      _logMsg.value = msg;
+    });
     init();
   }
 
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
+    prefs = await SharedPreferences.getInstance();
     final categories = prefs.getStringList("categories");
     if (categories != null) {
       setState(() {
@@ -130,10 +138,14 @@ class _MyHomePageState extends State<MyHomePage> {
         _categories.addAll(categories);
       });
     }
+    final query = prefs.getString("lastQuery");
+    if (query != null) {
+      _textController.text = query;
+      await _compute();
+    }
   }
 
   Future<void> save() async {
-    final prefs = await SharedPreferences.getInstance();
     print("save categories: $_categories");
     await prefs.setStringList("categories", _categories);
   }
@@ -155,6 +167,8 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _similarCategory = _categories[index];
     });
+    await prefs.setString("lastQuery", word);
+    _logMsg.value = "";
   }
 
   Future<void> showNewCategorySheet() async {
