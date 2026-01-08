@@ -40,7 +40,8 @@ class TextEmbeddingService {
 
     String appDocDir;
     if (Platform.isWindows && !kIsWeb) {
-      appDocDir = ".";
+      // appDocDir = ".";
+      appDocDir = (await getApplicationDocumentsDirectory()).path;
     } else {
       appDocDir = (await getApplicationDocumentsDirectory()).path;
     }
