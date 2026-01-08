@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import './text_embedding_service.dart';
 
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: '相似分类',
       theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
       home: const MyHomePage(title: '相似分类'),
@@ -71,6 +72,12 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            onPressed: _showVersion,
+            icon: const Icon(Icons.info_outline),
+          ),
+        ],
       ),
       body: Center(
         child: Column(
@@ -191,12 +198,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _compute() async {
+    final word = _textController.text;
+    if (word.isEmpty) {
+      return;
+    }
     setState(() {
       _similarCategory = "计算中···";
     });
     _similarities.clear();
     await Future.delayed(const Duration(milliseconds: 50));
-    final word = _textController.text;
     final similarities = await _service.getSimilarities(word, _categories);
     _similarities.addAll(similarities);
 
@@ -215,6 +225,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
     await prefs.setString("lastQuery", word);
     _logMsg.value = "";
+  }
+
+  Future<void> _showVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    await Get.dialog(
+      AlertDialog(
+        title: const Text("Similarity"),
+        content: Text('版本: ${packageInfo.version}\n一个计算句子相似度的小工具!'),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text('OK')),
+        ],
+      ),
+    );
   }
 
   Future<void> showNewCategorySheet() async {
@@ -256,13 +279,13 @@ class _MyHomePageState extends State<MyHomePage> {
                       _addCategory(_newCategoryTextController.text);
                       Navigator.of(context).pop();
                     },
-                    icon: Icon(Icons.check_circle_outline),
+                    icon: const Icon(Icons.check_circle_outline),
                   ),
                   IconButton(
                     onPressed: () {
                       Navigator.of(context).pop();
                     },
-                    icon: Icon(Icons.cancel_outlined),
+                    icon: const Icon(Icons.cancel_outlined),
                   ),
                 ],
               ),
