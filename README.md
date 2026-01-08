@@ -2,17 +2,6 @@
 
 一个简单的句子相似度计算工具。
 
-## Screenshot
-
-安卓手机：
-
-![screenshot](./images/android_screenshot.jpg)
-
-Windows:
-
-![screenshot](./images/win_screentshot.png)
-
-
 ## Usage
 
 可以从 [release 页面](https://github.com/LeePark/similarity/releases) 下载安装包。
@@ -25,6 +14,18 @@ Windows:
 模型格式为 `onnx`, 可以从 [这里获取](https://huggingface.co/LeePark/gemma-embedding-300M-onnx-int8) 。
 
 Tokenizer 使用 dart 版本的 [sentencepiece](https://pub.dev/packages/dart_sentencepiece_tokenizer) 。
+
+
+## Screenshot
+
+安卓手机：
+
+![screenshot](./images/android_screenshot.jpg)
+
+Windows:
+
+![screenshot](./images/win_screentshot.png)
+
 
 ## Build 
 
